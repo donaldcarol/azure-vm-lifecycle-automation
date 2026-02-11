@@ -70,12 +70,15 @@ jobs:
             echo "== disk by name+rg =="
             az disk show -g "$diskRg" -n "$diskName" -o jsonc
 
+            location=$(az disk show --ids "$osDiskId" --query "location" -o tsv)
+
 
             az snapshot create \
-              -g "$diskRg" \
-              -n "$snapName" \
-              --source "$diskName" \
-              --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
+             -g "$diskRg" \
+             -n "$snapName" \
+             --source "$osDiskId" \
+             --location "$location" \
+             --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
               >/dev/null
 
             echo "Created snapshot: $diskRg/$snapName"
