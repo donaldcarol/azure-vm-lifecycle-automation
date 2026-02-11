@@ -1,6 +1,12 @@
 
 # Azure VM Lifecycle Automation with GitHub Actions
 
+![VM Power](https://github.com/donaldcarol/azure-vm-lifecycle-automation/actions/workflows/vm-power.yaml/badge.svg)
+![VM Snapshot](https://github.com/donaldcarol/azure-vm-lifecycle-automation/actions/workflows/vm-snapshot.yaml/badge.svg)
+![VM Patch](https://github.com/donaldcarol/azure-vm-lifecycle-automation/actions/workflows/vm-patch-windows.yaml/badge.svg)
+
+
+
 Small, production-inspired demo repository that shows how to automate common Azure VM operations using GitHub Actions:
 - Start/Stop/Restart/Deallocate VMs
 - OS disk snapshots with retention cleanup
