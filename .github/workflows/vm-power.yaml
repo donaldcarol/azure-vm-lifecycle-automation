@@ -1,0 +1,79 @@
+name: Azure VM Power Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "start | stop | restart | deallocate"
+        required: true
+        default: "stop"
+      vms:
+        description: "Comma-separated list: rg1/vm1,rg2/vm2"
+        required: true
+      dry_run:
+        description: "If true, only prints what would happen"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: vm-power-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vm_power:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: VM operation (Az CLI)
+        shell: bash
+        env:
+          ACTION: ${{ inputs.action }}
+          VMS: ${{ inputs.vms }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          # English comments:
+          # - We accept a "rg/vm,rg/vm" list and apply one action to all.
+          # - Dry-run mode prints commands without executing them.
+          # - We log commands for auditability.
+
+          ACTION="$(echo "$ACTION" | tr '[:upper:]' '[:lower:]')"
+          DRY="$(echo "$DRY" | tr '[:upper:]' '[:lower:]')"
+
+          case "$ACTION" in
+            start)      BASE=(az vm start) ;;
+            stop)       BASE=(az vm stop) ;;
+            restart)    BASE=(az vm restart) ;;
+            deallocate) BASE=(az vm deallocate) ;;
+            *) echo "Unsupported action: $ACTION" >&2; exit 2 ;;
+          esac
+
+          IFS=',' read -ra ITEMS <<< "$VMS"
+
+          for item in "${ITEMS[@]}"; do
+            item="$(echo "$item" | xargs)"
+            rg="${item%%/*}"
+            vm="${item##*/}"
+
+            CMD=("${BASE[@]}" -g "$rg" -n "$vm")
+            echo ">> ${CMD[*]}"
+
+            if [ "$DRY" = "true" ]; then
+              continue
+            fi
+
+            "${CMD[@]}"
+          done
+
+          echo "Done."

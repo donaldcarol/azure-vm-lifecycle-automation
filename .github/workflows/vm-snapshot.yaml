@@ -1,0 +1,82 @@
+name: Snapshot OS Disk for Azure VM(s)
+
+on:
+  workflow_dispatch:
+    inputs:
+      vms:
+        description: "Comma-separated list: rg1/vm1,rg2/vm2"
+        required: true
+      retain_days:
+        description: "Retention in days (snapshots older than this will be deleted)"
+        required: true
+        default: "14"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create snapshots and apply retention
+        shell: bash
+        env:
+          VMS: ${{ inputs.vms }}
+          RETAIN_DAYS: ${{ inputs.retain_days }}
+        run: |
+          set -euo pipefail
+
+          # English comments:
+          # - Snapshot OS disk only (common rollback primitive).
+          # - Tag snapshots for easy discovery and cleanup.
+          # - Retention cleanup uses timeCreated cutoff.
+
+          IFS=',' read -ra ITEMS <<< "$VMS"
+
+          for item in "${ITEMS[@]}"; do
+            item="$(echo "$item" | xargs)"
+            rg="${item%%/*}"
+            vm="${item##*/}"
+
+            echo "=== Processing $rg/$vm ==="
+
+            osDiskId=$(az vm show -g "$rg" -n "$vm" --query "storageProfile.osDisk.managedDisk.id" -o tsv)
+            if [ -z "$osDiskId" ]; then
+              echo "Could not get OS disk id for $rg/$vm" >&2
+              exit 2
+            fi
+
+            ts=$(date -u +"%Y%m%dT%H%M%SZ")
+            snapName="snap-${vm}-os-${ts}"
+
+            az snapshot create \
+              -g "$rg" \
+              -n "$snapName" \
+              --source "$osDiskId" \
+              --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
+              >/dev/null
+
+            echo "Created snapshot: $snapName"
+          done
+
+          cutoff=$(date -u -d "-$RETAIN_DAYS days" +"%Y-%m-%dT%H:%M:%SZ")
+          echo "Retention cutoff: $cutoff"
+
+          oldSnaps=$(az snapshot list --query "[?tags.CreatedBy=='GitHubActions' && timeCreated < '$cutoff'].[resourceGroup,name]" -o tsv || true)
+          if [ -z "$oldSnaps" ]; then
+            echo "No old snapshots to delete."
+            exit 0
+          fi
+
+          echo "$oldSnaps" | while read -r srg sname; do
+            echo "Deleting old snapshot $srg/$sname"
+            az snapshot delete -g "$srg" -n "$sname"
+          done
