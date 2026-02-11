@@ -55,8 +55,11 @@ jobs:
             ts=$(date -u +"%Y%m%dT%H%M%SZ")
             snapName="snap-${vm}-os-${ts}"
 
+            # Extract disk resource group from full resource ID
+            diskRg=$(echo "$osDiskId" | cut -d'/' -f5)
+
             az snapshot create \
-              -g "$rg" \
+              -g "$diskRg" \
               -n "$snapName" \
               --source "$osDiskId" \
               --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
@@ -64,7 +67,6 @@ jobs:
 
             echo "Created snapshot: $snapName"
           done
-
           cutoff=$(date -u -d "-$RETAIN_DAYS days" +"%Y-%m-%dT%H:%M:%SZ")
           echo "Retention cutoff: $cutoff"
 
