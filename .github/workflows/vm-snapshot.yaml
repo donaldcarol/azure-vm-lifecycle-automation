@@ -58,8 +58,20 @@ diskName=$(echo "$osDiskId" | awk -F/ '{print $9}')
 echo "OS Disk RG: $diskRg"
 echo "OS Disk Name: $diskName"
 
+<<<<<<< HEAD
 ts=$(date -u +"%Y%m%dT%H%M%SZ")
 snapName="snap-${vm}-os-${ts}"
+=======
+            # Extract disk resource group from full resource ID
+            diskRg=$(echo "$osDiskId" | cut -d'/' -f5)
+
+            az snapshot create \
+              -g "$diskRg" \
+              -n "$snapName" \
+              --source "$osDiskId" \
+              --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
+              >/dev/null
+>>>>>>> cc7f992f0cb8c4043610807b9b1e4971f1deeff6
 
 # Create snapshot in the disk's resource group, using disk NAME as the source
 az snapshot create \
@@ -73,7 +85,6 @@ echo "Created snapshot: $diskRg/$snapName"
 
            
           done
-
           cutoff=$(date -u -d "-$RETAIN_DAYS days" +"%Y-%m-%dT%H:%M:%SZ")
           echo "Retention cutoff: $cutoff"
 
