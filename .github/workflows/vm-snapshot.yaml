@@ -38,37 +38,38 @@ jobs:
           # - Retention cleanup uses timeCreated cutoff.
 
           IFS=',' read -ra ITEMS <<< "$VMS"
-
-          for item in "${ITEMS[@]}"; do
+                    for item in "${ITEMS[@]}"; do
             item="$(echo "$item" | xargs)"
             rg="${item%%/*}"
             vm="${item##*/}"
 
             echo "=== Processing $rg/$vm ==="
-        osDiskId=$(az vm show -g "$rg" -n "$vm" --query "storageProfile.osDisk.managedDisk.id" -o tsv)
-if [ -z "$osDiskId" ]; then
-  echo "Could not get OS disk id for $rg/$vm" >&2
-  exit 2
-fi
 
-# Extract disk resource group and disk name from the resource ID
-diskRg=$(echo "$osDiskId" | awk -F/ '{print $5}')
-diskName=$(echo "$osDiskId" | awk -F/ '{print $9}')
+            osDiskId=$(az vm show -g "$rg" -n "$vm" --query "storageProfile.osDisk.managedDisk.id" -o tsv)
+            if [ -z "$osDiskId" ]; then
+              echo "Could not get OS disk id for $rg/$vm" >&2
+              exit 2
+            fi
 
-echo "OS Disk RG: $diskRg"
-echo "OS Disk Name: $diskName"
+            # Extract disk resource group and disk name from the resource ID
+            diskRg=$(echo "$osDiskId" | awk -F/ '{print $5}')
+            diskName=$(echo "$osDiskId" | awk -F/ '{print $9}')
 
-ts=$(date -u +"%Y%m%dT%H%M%SZ")
-snapName="snap-${vm}-os-${ts}"
+            echo "OS Disk RG: $diskRg"
+            echo "OS Disk Name: $diskName"
 
-az snapshot create \
-  -g "$diskRg" \
-  -n "$snapName" \
-  --source "$diskName" \
-  --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
-  >/dev/null
+            ts=$(date -u +"%Y%m%dT%H%M%SZ")
+            snapName="snap-${vm}-os-${ts}"
 
-echo "Created snapshot: $diskRg/$snapName"
+            az snapshot create \
+              -g "$diskRg" \
+              -n "$snapName" \
+              --source "$diskName" \
+              --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
+              >/dev/null
+
+            echo "Created snapshot: $diskRg/$snapName"
+          done
 
            
           done
