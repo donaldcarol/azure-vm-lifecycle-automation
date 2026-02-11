@@ -62,7 +62,7 @@ Inputs:
 ## Security Model
 
 ### Recommended: OIDC Federated Credentials
-Use GitHub OIDC to authenticate to Azure without storing secrets.
+Supports both OIDC authentication and Service Principal-based authentication.
 
 **Minimum permissions in workflow**:
 - `permissions: id-token: write`
