@@ -61,6 +61,16 @@ jobs:
             ts=$(date -u +"%Y%m%dT%H%M%SZ")
             snapName="snap-${vm}-os-${ts}"
 
+            echo "== account =="
+            az account show -o jsonc
+
+            echo "== disk by id =="
+            az disk show --ids "$osDiskId" -o jsonc
+
+            echo "== disk by name+rg =="
+            az disk show -g "$diskRg" -n "$diskName" -o jsonc
+
+
             az snapshot create \
               -g "$diskRg" \
               -n "$snapName" \
