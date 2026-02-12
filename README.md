@@ -31,7 +31,7 @@ This repo is designed as a clean "portfolio-style" example: safe execution patte
 
 **A more secure**, secretless implementation using OpenID Connect (OIDC)
 is available in a separate repository.
-
+https://github.com/donaldcarol/azure-vm-lab
 
 ---
 
