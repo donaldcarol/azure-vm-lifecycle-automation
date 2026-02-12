@@ -38,53 +38,54 @@ jobs:
           # - Retention cleanup uses timeCreated cutoff.
 
           IFS=',' read -ra ITEMS <<< "$VMS"
-
-          for item in "${ITEMS[@]}"; do
+                    for item in "${ITEMS[@]}"; do
             item="$(echo "$item" | xargs)"
             rg="${item%%/*}"
             vm="${item##*/}"
 
             echo "=== Processing $rg/$vm ==="
-osDiskId=$(az vm show -g "$rg" -n "$vm" --query "storageProfile.osDisk.managedDisk.id" -o tsv)
-if [ -z "$osDiskId" ]; then
-  echo "Could not get OS disk id for $rg/$vm" >&2
-  exit 2
-fi
 
-# Extract disk resource group and disk name from the resource ID
-diskRg=$(echo "$osDiskId" | awk -F/ '{print $5}')
-diskName=$(echo "$osDiskId" | awk -F/ '{print $9}')
+            osDiskId=$(az vm show -g "$rg" -n "$vm" --query "storageProfile.osDisk.managedDisk.id" -o tsv)
+            if [ -z "$osDiskId" ]; then
+              echo "Could not get OS disk id for $rg/$vm" >&2
+              exit 2
+            fi
 
-echo "OS Disk RG: $diskRg"
-echo "OS Disk Name: $diskName"
+            # Extract disk resource group and disk name from the resource ID
+            diskRg=$(echo "$osDiskId" | awk -F/ '{print $5}')
+            diskName=$(echo "$osDiskId" | awk -F/ '{print $9}')
 
-<<<<<<< HEAD
-ts=$(date -u +"%Y%m%dT%H%M%SZ")
-snapName="snap-${vm}-os-${ts}"
-=======
-            # Extract disk resource group from full resource ID
-            diskRg=$(echo "$osDiskId" | cut -d'/' -f5)
+            echo "OS Disk RG: $diskRg"
+            echo "OS Disk Name: $diskName"
+
+            ts=$(date -u +"%Y%m%dT%H%M%SZ")
+            snapName="snap-${vm}-os-${ts}"
+
+            echo "== account =="
+            az account show -o jsonc
+
+            echo "== disk by id =="
+            az disk show --ids "$osDiskId" -o jsonc
+
+            echo "== disk by name+rg =="
+            az disk show -g "$diskRg" -n "$diskName" -o jsonc
+
+            location=$(az disk show --ids "$osDiskId" --query "location" -o tsv)
+
 
             az snapshot create \
-              -g "$diskRg" \
-              -n "$snapName" \
-              --source "$osDiskId" \
-              --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
+             -g "$diskRg" \
+             -n "$snapName" \
+             --source "$osDiskId" \
+             --location "$location" \
+             --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
               >/dev/null
->>>>>>> cc7f992f0cb8c4043610807b9b1e4971f1deeff6
 
-# Create snapshot in the disk's resource group, using disk NAME as the source
-az snapshot create \
-  -g "$diskRg" \
-  -n "$snapName" \
-  --source "$diskName" \
-  --tags "CreatedBy=GitHubActions" "VMName=$vm" "Purpose=PreChange" \
-  >/dev/null
-
-echo "Created snapshot: $diskRg/$snapName"
+            echo "Created snapshot: $diskRg/$snapName"
+          done
 
            
-          done
+     
           cutoff=$(date -u -d "-$RETAIN_DAYS days" +"%Y-%m-%dT%H:%M:%SZ")
           echo "Retention cutoff: $cutoff"
 
