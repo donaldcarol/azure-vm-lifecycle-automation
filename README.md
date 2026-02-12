@@ -18,14 +18,20 @@ This repo is designed as a clean "portfolio-style" example: safe execution patte
 
 ## Key Features
 
-- Azure authentication using Service Principal (client secret)
-- GitHub repository secrets for credential storage
-- RBAC-based access control
-- VM lifecycle automation via GitHub Actions
+- **Azure** authentication using Service Principal (client secret)
+- **GitHub** repository secrets for credential storage
+- **RBAC-based** access control
+- **VM lifecycle automation** via GitHub Actions
 - **Dry-run** support for power actions (safe preview).
 - **Tag-based targeting** for patch operations.
 - **Snapshot retention** cleanup based on creation timestamp.
 - **Audit-friendly logs** (prints commands and structured output).
+
+## Note
+
+**A more secure**, secretless implementation using OpenID Connect (OIDC)
+is available in a separate repository.
+
 
 ---
 
