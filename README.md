@@ -18,7 +18,10 @@ This repo is designed as a clean "portfolio-style" example: safe execution patte
 
 ## Key Features
 
-- **OIDC auth** via `azure/login` (recommended). No secrets required when federated credentials are configured.
+- Azure authentication using Service Principal (client secret)
+- GitHub repository secrets for credential storage
+- RBAC-based access control
+- VM lifecycle automation via GitHub Actions
 - **Dry-run** support for power actions (safe preview).
 - **Tag-based targeting** for patch operations.
 - **Snapshot retention** cleanup based on creation timestamp.
